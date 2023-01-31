@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Websockets</title>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/normalizr@3.6.2/dist/normalizr.browser.min.js"></script>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.2/css/bootstrap.min.css">
+
+    <style>
+        body {
+            padding-left: 20px;
+        }
+
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            appearance: none;
+            margin: 0;
+        }
+
+        #productos,
+        .container-chat {
+            width: 35%;
+        }
+
+        #porcentajeCompresion {
+            color: blue;
+        }
+
+        form {
+            margin: 20px;
+            display: inline-flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: flex-end;
+        }
+
+        .buttonProducto {
+            width: 100%;
+        }
+
+        .form {
+            gap: 0px;
+        }
+    </style>
+</head>
+
+<body>
+    <div>
+        <div class="d-flex align-self-center">
+            <h2 class="d-flex align-self-center">Bienvenido <%= username %>
+            </h2>
+            <form action="http://localhost:8080/logout" method="GET">
+                <button type="submit" class="btn btn-success">Desloguear</button>
+            </form>
+        </div>
+    </div>
+
+    <h2>Guardar nuevo producto</h2>
+    <div>
+        <form onsubmit="return addProduct()">
+            <span>Nombre del producto: <input type="text" name="title" id="title"></span>
+            <span>Precio: <input type="number" name="price" id="price"></span>
+            <span>URL imagen: <input type="text" name="thumbnail" id="thumbnail"></span>
+            <button class="buttonProducto btn btn-primary">Enviar</button>
+        </form>
+    </div>
+
+    <h2>Lista de productos</h2>
+    <div id="productos">
+    </div>
+
+    <h2>Centro de mensajes <span id="porcentajeCompresion"></span> </h2>
+    <div class="container-chat">
+        <form class="form align-items-start col-12" onsubmit="return sendMessage()">
+            <div class="col-12">
+                <input class="col-8" type="text" name="email" id="email" placeholder="Email">
+                <input class="col-8" type="text" name="nombre" id="nombre" placeholder="Nombre">
+                <input class="col-8" type="text" name="apellido" id="apellido" placeholder="Apellido">
+                <input class="col-8" type="number" name="edad" id="edad" placeholder="Edad">
+                <input class="col-8" type="text" name="alias" id="alias" placeholder="Alias">
+                <input class="col-8" type="text" name="avatar" id="avatar" placeholder="URL Avatar">
+            </div>
+            <hr class="col-12">
+            <div id="mensajes">
+            </div>
+            <div class="col-12">
+                <span><input class="col-8" type="text" name="message" id="message" placeholder="Mensaje"></span>
+                <button class="btn btn-success">Enviar</button>
+            </div>
+        </form>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
+        crossorigin="anonymous"></script>
+
+    <script>
+        const socket = io.connect();
+        socket.on('productos', productos => {
+            if (productos.length < 1) {
+                document.getElementById('productos').innerHTML = '<div class="text-danger border border-danger d-flex justify-content-center">No hay productos cargados</div>'
+            } else {
+                const table = document.createElement('table');
+                const htmlProductos = productos.map(producto => {
+                    return (`
+                    <tr>
+                        <td>${producto.title}</td>
+                        <td>${producto.price}</td>
+                        <td><img src="${producto.thumbnail}" alt="${producto.title}"></td>
+                    </tr>
+                `)
+                }).join(" ");
+
+                const tableHeader = "<theader><tr><th>Nombre</th><th>Precio</th><th>Imágen</th></tr></theader>"
+
+                table.innerHTML = tableHeader + htmlProductos;
+                table.classList.add("table");
+                table.classList.add("table-dark");
+                table.classList.add("table-striped");
+
+                const contenido = table.outerHTML;
+                document.getElementById('productos').innerHTML = contenido;
+            }
+        });
+
+        socket.on('mensajes', mensajesNormalizados => {
+            console.log(mensajesNormalizados);
+
+            //Normalizr
+            const denormalize = normalizr.denormalize;
+            const schema = normalizr.schema;
+
+            //Esquemas normalizacion
+            const author = new schema.Entity('authors', {}, { idAttribute: 'email' });
+            const message = new schema.Entity('messages', { author: author }, { idAttribute: 'id' });
+            const mensajeria = new schema.Entity('mensajeria', { messages: [message] }, { idAttribute: 'id' });
+
+            const mensajesDenormalizados = denormalize(mensajesNormalizados.result, mensajeria, mensajesNormalizados.entities);
+
+            console.log(mensajesDenormalizados);
+
+            let divMensajes = document.getElementById('mensajes');
+            divMensajes.innerHTML = "";
+            for (let i = 0; i < mensajesDenormalizados.messages.length; i++) {
+                let divMessageHtml = `<div><span class="text-primary">${mensajesDenormalizados.messages[i].author.email} </span><span class="text-danger">${mensajesDenormalizados.messages[i].date}: </span><span>${mensajesDenormalizados.messages[i].text}</span></div>`;
+                divMensajes.innerHTML = divMensajes.outerHTML + divMessageHtml;
+            }
+
+            let compresion = (100 - (JSON.stringify(mensajesDenormalizados).length * 100 / JSON.stringify(mensajesNormalizados).length));
+            let spanCompresion = document.getElementById('porcentajeCompresion');
+            spanCompresion.innerHTML = `Compresión: ${compresion}%`;
+        })
+
+        function addProduct() {
+            const product = {
+                title: document.getElementById('title').value,
+                price: document.getElementById('price').value,
+                thumbnail: document.getElementById('thumbnail').value,
+            }
+
+            socket.emit('nuevo-producto', product);
+
+            document.getElementById('title').value = "";
+            document.getElementById('price').value = "";
+            document.getElementById('thumbnail').value = "";
+
+            return false;
+        }
+
+        function sendMessage() {
+            if (document.getElementById('email').value === "") {
+                alert("Campo de email vacío");
+            } else {
+                let today = new Date();
+                let dd = String(today.getDate()).padStart(2, '0');
+                let mm = String(today.getMonth() + 1).padStart(2, '0'); //January is 0!
+                let yyyy = today.getFullYear();
+                let hours = today.getHours();
+                let minutes = today.getMinutes();
+                let seconds = today.getSeconds();
+
+                const message = {
+                    author: {
+                        email: document.getElementById('email').value,
+                        nombre: document.getElementById('nombre').value,
+                        apellido: document.getElementById('apellido').value,
+                        edad: document.getElementById('edad').value,
+                        alias: document.getElementById('alias').value,
+                        avatar: document.getElementById('avatar').value
+                    },
+                    text: document.getElementById('message').value,
+                    date: `[${dd}/${mm}/${yyyy} ${hours}:${minutes}:${seconds}]`
+                }
+
+                socket.emit('nuevo-mensaje', message);
+
+                document.getElementById('message').value = "";
+            }
+
+            return false;
+        }
+    </script>
+</body>
+
+</html>
