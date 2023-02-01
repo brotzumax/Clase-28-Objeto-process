@@ -119,6 +119,21 @@ app.get("/api/productos-test", sessionPersistence, (req, res) => {
     res.render("pages/testView");
 })
 
+app.get("/info", (req, res) => {
+    res.send(
+        "<h1>Información de la aplicación</h1>" +
+        "<div style='display: flex; flex-direction: column'>" +
+        "<span>Argumentos de entrada: -p (puerto)</span>" +
+        `<span>Nombre de la plataforma: ${process.platform}</span>` +
+        `<span>Versión de node.js: ${process.version}</span>` +
+        `<span>Memoria total reservada (rss): ${process.memoryUsage().rss}</span>` +
+        `<span>Path de ejecución:  ${process.title}</span>` +
+        `<span>Process id: ${process.pid}</span>` +
+        `<span>Carpeta del proyecto: ${process.cwd()}</span>` +
+        "</div>"
+    );
+})
+
 //Websocket
 io.on('connection', function (socket) {
     console.log("Cliente conectado");
