@@ -1,10 +1,12 @@
+require('dotenv').config();
+
 const options = {
-    client: "mysql",
+    client: process.env.CLIENT,
     connection: {
-        host: "localhost",
-        user: "root",
+        host: process.env.HOST,
+        user: process.env.USER,
         password: "",
-        database: "ecommerce"
+        database: process.env.DATABASE_NAME
     }
 }
 

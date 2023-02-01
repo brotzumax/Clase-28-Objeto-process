@@ -58,6 +58,10 @@ function sessionPersistence(req, res, next) {
 }
 
 
+//.env
+require('dotenv').config();
+
+
 //Inicio de servidor
 const app = express();
 const httpServer = new HttpServer(app);
@@ -69,7 +73,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(session({
     store: MongoStore.create({
-        mongoUrl: 'mongodb+srv://admin:1234@ecommerce-backend.sfz5w6r.mongodb.net/?retryWrites=true&w=majority',
+        mongoUrl: process.env.MONGO_URL,
         mongoOptions: advancedOptions
     }),
     secret: 'secreto',
@@ -126,7 +130,6 @@ io.on('connection', function (socket) {
                 messages: convertirArray(data)
             };
             const mensajesNormalizados = normalize(chat, mensajeria);
-            /* print(mensajesNormalizados); */
             io.sockets.emit('mensajes', mensajesNormalizados);
         })
         .catch((err) => console.log(err));
@@ -152,7 +155,6 @@ io.on('connection', function (socket) {
                     messages: convertirArray(data)
                 };
                 const mensajesNormalizados = normalize(chat, mensajeria);
-                /* print(mensajesNormalizados); */
                 io.sockets.emit('mensajes', mensajesNormalizados);
             })
             .catch((err) => console.log(err));
