@@ -68,6 +68,10 @@ const argsOptions = { alias: { p: 'puerto' }, default: { puerto: 8080 } };
 const args = parseArgs(process.argv.slice(2), argsOptions);
 
 
+//Fork
+const { fork } = require('child_process');
+
+
 //Inicio de servidor
 const app = express();
 const httpServer = new HttpServer(app);
@@ -117,7 +121,7 @@ app.get("/", sessionPersistence, (req, res) => {
 
 app.get("/api/productos-test", sessionPersistence, (req, res) => {
     res.render("pages/testView");
-})
+});
 
 app.get("/info", (req, res) => {
     res.send(
@@ -127,11 +131,24 @@ app.get("/info", (req, res) => {
         `<span>Nombre de la plataforma: ${process.platform}</span>` +
         `<span>Versión de node.js: ${process.version}</span>` +
         `<span>Memoria total reservada (rss): ${process.memoryUsage().rss}</span>` +
-        `<span>Path de ejecución:  ${process.title}</span>` +
+        `<span>Path de ejecución:  ${process.execPath}</span>` +
         `<span>Process id: ${process.pid}</span>` +
         `<span>Carpeta del proyecto: ${process.cwd()}</span>` +
         "</div>"
     );
+});
+
+app.get("/api/randoms", (req, res) => {
+    let cantidadNumeros = Number(req.query.cant);
+    const calculo = fork('numerosRandom.js');
+
+    calculo.on('message', resultado => {
+        if (resultado == "Listo") {
+            calculo.send(cantidadNumeros);
+        } else {
+            res.json(resultado);
+        }
+    });
 })
 
 //Websocket
