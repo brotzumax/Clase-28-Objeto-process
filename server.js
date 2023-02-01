@@ -62,6 +62,12 @@ function sessionPersistence(req, res, next) {
 require('dotenv').config();
 
 
+//Minimist
+const parseArgs = require('minimist');
+const argsOptions = { alias: { p: 'puerto' }, default: { puerto: 8080 } };
+const args = parseArgs(process.argv.slice(2), argsOptions);
+
+
 //Inicio de servidor
 const app = express();
 const httpServer = new HttpServer(app);
@@ -162,6 +168,6 @@ io.on('connection', function (socket) {
 });
 
 //Escucha del servidor
-httpServer.listen(8080, () => {
-    console.log("Servidor escuchando en puerto 8080");
+httpServer.listen(args.puerto, () => {
+    console.log(`Servidor escuchando en puerto ${args.puerto}`);
 })
